@@ -16,14 +16,11 @@
 
 import sys
 import os
+import re
 import traceback
 
-from os import path
 from cortx.utils.validator.v_pkg import PkgV
-from cortx.utils.validator.v_service import ServiceV
-from cortx.utils.validator.v_path import PathV
 from cortx.utils.validator.v_network import NetworkV
-from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 
 class OpenldapSetupError(Exception):
@@ -51,6 +48,7 @@ class Openldap:
     _prov_conf_file = "/opt/seagate/cortx/.../openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
+        global index, prov
         Conf.load(index, conf_url)
         Conf.load(prov, f'yaml://{self._prov_conf_file}')
 
@@ -89,6 +87,7 @@ class Openldap:
 
     def key_value_verify(self, key: str):
         """Verify if there exists a corresponding value for given key."""
+        global index, prov
         # Once a key from yardstick file has found a
         # matching pair in argument file, the value
         # of that key from argument file needs to be
@@ -106,6 +105,7 @@ class Openldap:
 
     def extract_yardstick_list(self, phase_name: str):
         """Extract keylist to be used as yardstick for validating keys of each phase."""
+        global index, prov
         # The openldap prov config file has below pairs :
         # "Key Constant" : "Actual Key"
         # Example of "Key Constant" :
@@ -141,7 +141,6 @@ class Openldap:
         # list for the phase passed here.
         yardstick_list = []
         prev_phase = True
-        curr_phase = False
         next_phase = False
         for key in prov_keys_list:
             # If PHASE is not relevant, skip the key.
@@ -152,7 +151,6 @@ class Openldap:
                 break
             if key.find(phase_name) == 0:
                 prev_phase = False
-                curr_phase = True
             else:
                 if (
                      phase_name == "TEST" or
@@ -161,7 +159,6 @@ class Openldap:
                    ):
                     continue
                 if not prev_phase:
-                    curr_phase = False
                     next_phase = True
                     break
             value = Conf.get(index, key)
@@ -175,8 +172,8 @@ class Openldap:
 
     def keys_validate(self, phase_name: str):
         """Validate keys of each phase derived from openldap_prov_config against argument file."""
+        global index, prov
         # Setting the desired values before we begin
-        token_list = ["machine-id", "cluster-id", "storage-set-count"]
         if self.machine_id is not None:
             machine_id_val = self.machine_id
         if self.cluster_id is not None:
