@@ -44,8 +44,8 @@ class Openldap:
     """ Represents Openldap and Performs setup related actions """
     index = "openldap"
     prov = "provisioning"
-    _preqs_conf_file = "/opt/seagate/cortx/.../openldapsetup_prereqs.json"
-    _prov_conf_file = "/opt/seagate/cortx/.../openldap_prov_config.yaml"
+    _preqs_conf_file = "/opt/seagate/cortx/setup/openldap/openldapsetup_prereqs.json"
+    _prov_conf_file = "/opt/seagate/cortx/setup/openldap/openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
         global prov
