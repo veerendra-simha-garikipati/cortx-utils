@@ -252,7 +252,7 @@ class Openldap:
             if list_match_found is False:
                 raise Exception(f'No match found for {key_yard}')
             sys.stdout.write("Validation complete\n")
-  
+
         except Exception as e:
             raise Exception(f'ERROR : Validating keys failed, exception {e}\n')
 
