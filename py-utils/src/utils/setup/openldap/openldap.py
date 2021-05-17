@@ -42,15 +42,19 @@ class OpenldapSetupError(Exception):
 
 class Openldap:
     """ Represents Openldap and Performs setup related actions """
+    index = "openldap"
+    prov = "provisioning"
     _preqs_conf_file = "/opt/seagate/cortx/setup/openldap/openldapsetup_prereqs.json"
     _prov_conf_file = "/opt/seagate/cortx/setup/openldap/openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
-        self.index = "openldap"
-        self.prov = "provisioning"
+        if not os.path.isfile(self._preqs_conf_file):
+            raise FileNotFoundError(f'pre-requisite json file: {self._preqs_conf_file} not found')
         Conf.load(self.index, conf_url)
         Conf.load(self.prov, f'yaml://{self._prov_conf_file}')
 
+        if not os.path.isfile('/etc/machine-id'):
+            raise FileNotFoundError('File not found : /etc/machine-id')
         # machine_id will be used to read confstore keys
         with open('/etc/machine-id') as f:
             self.machine_id = f.read().strip()
@@ -60,8 +64,6 @@ class Openldap:
 
     def validate(self, phase: str):
         """ Perform validations for phase. Raises exceptions if validation fails """
-        if not os.path.isfile(self._preqs_conf_file):
-            raise FileNotFoundError(f'pre-requisite json file: {self._preqs_conf_file} not found')
 
         # Perform all necessary validations
         try:
@@ -259,6 +261,8 @@ class Openldap:
     def post_install(self):
         """ Performs post install operations. Raises exception on error """
 
+        self.validate("post_install")
+        self.keys_validate("post_install")
         # Perform actual operation. Obtain inputs using Conf.get(index, ..)
         return 0
 
