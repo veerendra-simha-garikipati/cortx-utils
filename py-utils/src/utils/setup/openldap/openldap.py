@@ -48,7 +48,7 @@ class Openldap:
     _prov_conf_file = "/opt/seagate/cortx/.../openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
-        global index, prov
+        global prov
         Conf.load(index, conf_url)
         Conf.load(prov, f'yaml://{self._prov_conf_file}')
 
@@ -82,7 +82,7 @@ class Openldap:
                 if services:
                     PkgV().validate('services', services)
         except Exception as e:
-            raise Exception(f'ERROR: {phase_name} prereqs validations failed, exception: {e}')
+            raise Exception(f'ERROR: {phase} prereqs validations failed, exception: {e}')
         return 0
 
     def key_value_verify(self, key: str):
@@ -132,7 +132,7 @@ class Openldap:
         #   PREPARE
         # For such examples, we skip and continue with
         # remaining keys.
-       
+
         prov_keys_list = Conf.get_keys(prov)
         # We have all "Key Constant" in prov_keys_list,
         # now extract "Actual Key" if it exists and
