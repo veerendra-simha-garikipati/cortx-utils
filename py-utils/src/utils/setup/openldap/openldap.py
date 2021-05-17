@@ -42,13 +42,12 @@ class OpenldapSetupError(Exception):
 
 class Openldap:
     """ Represents Openldap and Performs setup related actions """
-    index = "openldap"
-    prov = "provisioning"
     _preqs_conf_file = "/opt/seagate/cortx/setup/openldap/openldapsetup_prereqs.json"
     _prov_conf_file = "/opt/seagate/cortx/setup/openldap/openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
-        global prov
+        index = "openldap"
+        prov = "provisioning"
         Conf.load(index, conf_url)
         Conf.load(prov, f'yaml://{self._prov_conf_file}')
 
@@ -87,7 +86,6 @@ class Openldap:
 
     def key_value_verify(self, key: str):
         """Verify if there exists a corresponding value for given key."""
-        global index, prov
         # Once a key from yardstick file has found a
         # matching pair in argument file, the value
         # of that key from argument file needs to be
@@ -105,7 +103,6 @@ class Openldap:
 
     def extract_yardstick_list(self, phase_name: str):
         """Extract keylist to be used as yardstick for validating keys of each phase."""
-        global index, prov
         # The openldap prov config file has below pairs :
         # "Key Constant" : "Actual Key"
         # Example of "Key Constant" :
@@ -172,7 +169,6 @@ class Openldap:
 
     def keys_validate(self, phase_name: str):
         """Validate keys of each phase derived from openldap_prov_config against argument file."""
-        global index, prov
         # Setting the desired values before we begin
         if self.machine_id is not None:
             machine_id_val = self.machine_id
@@ -194,7 +190,7 @@ class Openldap:
         try:
             # Extract keys from yardstick file for current phase considering inheritance
             yardstick_list = self.extract_yardstick_list(phase_name)
- 
+
             # Extract keys from argument file
             arg_keys_list = Conf.get_keys(index)
             # Since get_all_keys misses out listing entries inside
