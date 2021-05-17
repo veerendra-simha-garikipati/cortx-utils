@@ -46,17 +46,17 @@ class Openldap:
     _prov_conf_file = "/opt/seagate/cortx/setup/openldap/openldap_prov_config.yaml"
 
     def __init__(self, conf_url):
-        index = "openldap"
-        prov = "provisioning"
-        Conf.load(index, conf_url)
-        Conf.load(prov, f'yaml://{self._prov_conf_file}')
+        self.index = "openldap"
+        self.prov = "provisioning"
+        Conf.load(self.index, conf_url)
+        Conf.load(self.prov, f'yaml://{self._prov_conf_file}')
 
         # machine_id will be used to read confstore keys
         with open('/etc/machine-id') as f:
             self.machine_id = f.read().strip()
 
-        self.cluster_id_key = Conf.get(prov, 'CONFIG>CONFSTORE_CLUSTER_ID_KEY').replace("machine-id", self.machine_id)
-        self.cluster_id = Conf.get(index, self.cluster_id_key)
+        self.cluster_id_key = Conf.get(self.prov, 'CONFIG>CONFSTORE_CLUSTER_ID_KEY').replace("machine-id", self.machine_id)
+        self.cluster_id = Conf.get(self.index, self.cluster_id_key)
 
     def validate(self, phase: str):
         """ Perform validations for phase. Raises exceptions if validation fails """
@@ -91,7 +91,7 @@ class Openldap:
         # of that key from argument file needs to be
         # verified. It should be neither none, empty
         # nor any undesirable value.
-        value = Conf.get(index)
+        value = Conf.get(self.index)
         if not value:
             raise Exception(f'Empty value for key : {key}')
         else:
@@ -130,7 +130,7 @@ class Openldap:
         # For such examples, we skip and continue with
         # remaining keys.
 
-        prov_keys_list = Conf.get_keys(prov)
+        prov_keys_list = Conf.get_keys(self.prov)
         # We have all "Key Constant" in prov_keys_list,
         # now extract "Actual Key" if it exists and
         # depending on phase and hierarchy, decide
@@ -158,7 +158,7 @@ class Openldap:
                 if not prev_phase:
                     next_phase = True
                     break
-            value = Conf.get(index, key)
+            value = Conf.get(self.index, key)
             # If value does not exist which can be the
             # case for certain phases as mentioned above,
             # skip the value.
@@ -180,7 +180,7 @@ class Openldap:
         storage_set_count_key = "cluster>cluster-id>site>storage_set_count"
         if self.cluster_id is not None:
             storage_set_count_key = storage_set_count_key.replace("cluster-id", cluster_id_val)
-            storage_set_count_str = Conf.get(index, storage_set_count_key)
+            storage_set_count_str = Conf.get(self.index, storage_set_count_key)
         if storage_set_count_str is not None:
             storage_set_val = int(storage_set_count_str)
         else:
@@ -192,7 +192,7 @@ class Openldap:
             yardstick_list = self.extract_yardstick_list(phase_name)
 
             # Extract keys from argument file
-            arg_keys_list = Conf.get_keys(index)
+            arg_keys_list = Conf.get_keys(self.index)
             # Since get_all_keys misses out listing entries inside
             # an array, the below code is required to fetch such
             # array entries. The result will be stored in a full
@@ -201,14 +201,14 @@ class Openldap:
             full_arg_keys_list = []
             for key in arg_keys_list:
                 if ((key.find('[') != -1) and (key.find(']') != -1)):
-                    storage_set = Conf.get(index, key)
+                    storage_set = Conf.get(self.index, key)
                     base_key = key
                     for set_key in storage_set:
                         key = base_key + ">" + set_key
                         full_arg_keys_list.append(key)
                 else:
                     full_arg_keys_list.append(key)
-  
+
             # Below algorithm uses tokenization
             # of both yardstick and argument key
             # based on delimiter to generate
