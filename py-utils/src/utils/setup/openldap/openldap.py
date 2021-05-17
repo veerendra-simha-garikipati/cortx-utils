@@ -55,7 +55,7 @@ class Openldap:
 
         if not os.path.isfile('/etc/machine-id'):
             raise FileNotFoundError('File not found : /etc/machine-id')
-        # machine_id will be used to read confstore keys
+        """ machine_id will be used to read confstore keys """
         with open('/etc/machine-id') as f:
             self.machine_id = f.read().strip()
 
@@ -64,8 +64,6 @@ class Openldap:
 
     def validate(self, phase: str):
         """ Perform validations for phase. Raises exceptions if validation fails """
-
-        # Perform all necessary validations
         try:
             Conf.load(phase, f'json://{self._preqs_conf_file}')
             prereqs_block = Conf.get(phase, f'{phase}')
@@ -86,14 +84,17 @@ class Openldap:
             raise Exception(f'ERROR: {phase} prereqs validations failed, exception: {e}')
         return 0
 
-    def key_value_verify(self, key: str):
+    def _key_value_verify(self, key: str):
         """Verify if there exists a corresponding value for given key."""
-        # Once a key from yardstick file has found a
-        # matching pair in argument file, the value
-        # of that key from argument file needs to be
-        # verified. It should be neither none, empty
-        # nor any undesirable value.
-        value = Conf.get(self.index)
+
+        """
+        Once a key from yardstick file has found a
+        matching pair in argument file, the value
+        of that key from argument file needs to be
+        verified. It should be neither none, empty
+        nor any undesirable value.
+        """
+        value = Conf.get(self.index, key)
         if not value:
             raise Exception(f'Empty value for key : {key}')
         else:
@@ -103,82 +104,90 @@ class Openldap:
                     NetworkV().validate('connectivity',[value])
                     break
 
-    def extract_yardstick_list(self, phase_name: str):
+    def _extract_yardstick_list(self, phase_name: str):
         """Extract keylist to be used as yardstick for validating keys of each phase."""
-        # The openldap prov config file has below pairs :
-        # "Key Constant" : "Actual Key"
-        # Example of "Key Constant" :
-        #   CONFSTORE_SITE_COUNT_KEY
-        #   PREPARE
-        #   CONFIG>CONFSTORE_LDAPADMIN_USER_KEY
-        #   INIT
-        # Example of "Actual Key" :
-        #   cluster>cluster-id>site>storage_set_count
-        #   cortx>software>openldap>sgiam>user
-        #
-        # When we call get_all_keys on openldap prov config
-        # file, it returns all the "Key Constant",
-        # which will contain PHASE(name) as the root
-        # attribute (except for unsolicited keys).
-        # To get "Actual Key" from each "Key Constant",
-        # we need to call get_confkey on every such key.
-        #
-        # Note that for each of these "Key Constant",
-        # there may not exist an "Actual Key" because
-        # some phases do not have any "Actual Key".
-        # Example of such cases -
-        #   POST_INSTALL
-        #   PREPARE
-        # For such examples, we skip and continue with
-        # remaining keys.
+
+        """
+        The openldap prov config file has below pairs :
+        "Key Constant" : "Actual Key"
+        Example of "Key Constant" :
+          CONFSTORE_SITE_COUNT_KEY
+          PREPARE
+          CONFIG>CONFSTORE_LDAPADMIN_USER_KEY
+          INIT
+        Example of "Actual Key" :
+          cluster>cluster-id>site>storage_set_count
+          cortx>software>openldap>sgiam>user
+        
+        When we call get_all_keys on openldap prov config
+        file, it returns all the "Key Constant",
+        which will contain PHASE(name) as the root
+        attribute (except for unsolicited keys).
+        To get "Actual Key" from each "Key Constant",
+        we need to call get_confkey on every such key.
+        
+        Note that for each of these "Key Constant",
+        there may not exist an "Actual Key" because
+        some phases do not have any "Actual Key".
+        Example of such cases -
+          POST_INSTALL
+          PREPARE
+        For such examples, we skip and continue with
+        remaining keys.
+        """
 
         prov_keys_list = Conf.get_keys(self.prov)
-        # We have all "Key Constant" in prov_keys_list,
-        # now extract "Actual Key" if it exists and
-        # depending on phase and hierarchy, decide
-        # whether it should be added to the yardstick
-        # list for the phase passed here.
+        """
+        We have all "Key Constant" in prov_keys_list,
+        now extract "Actual Key" if it exists and
+        depending on phase and hierarchy, decide
+        whether it should be added to the yardstick
+        list for the phase passed here.
+        """
         yardstick_list = []
         prev_phase = True
         next_phase = False
         for key in prov_keys_list:
-            # If PHASE is not relevant, skip the key.
-            # Or set flag as appropriate. For test,
-            # reset and cleanup, do not inherit keys
-            # from previous phases.
+            """
+            If PHASE is not relevant, skip the key.
+            Or set flag as appropriate. For test,
+            reset and cleanup, do not inherit keys
+            from previous phases.
+            """
             if next_phase:
                 break
             if key.find(phase_name) == 0:
                 prev_phase = False
             else:
-                if (
-                     phase_name == "TEST" or
-                     phase_name == "RESET" or
-                     phase_name == "CLEANUP"
-                   ):
+                if phase_name in ["TEST", "RESET", "CLEANUP"]:
                     continue
                 if not prev_phase:
                     next_phase = True
                     break
             value = Conf.get(self.index, key)
-            # If value does not exist which can be the
-            # case for certain phases as mentioned above,
-            # skip the value.
+            """
+            If value does not exist which can be the
+            case for certain phases as mentioned above,
+            skip the value.
+            """
             if value is None:
                 continue
             yardstick_list.append(value)
         return yardstick_list
 
-    def keys_validate(self, phase_name: str):
+    def _keys_validate(self, phase_name: str):
         """Validate keys of each phase derived from openldap_prov_config against argument file."""
-        # Setting the desired values before we begin
+
+        """ Setting the desired values before we begin """
         if self.machine_id is not None:
             machine_id_val = self.machine_id
         if self.cluster_id is not None:
             cluster_id_val = self.cluster_id
-        # The 'storage_set_count' is read using
-        # below hard-coded key which is the max
-        # array size for storage set.
+        """
+        The 'storage_set_count' is read using
+        below hard-coded key which is the max
+        array size for storage set.
+        """
         storage_set_count_key = "cluster>cluster-id>site>storage_set_count"
         if self.cluster_id is not None:
             storage_set_count_key = storage_set_count_key.replace("cluster-id", cluster_id_val)
@@ -187,19 +196,21 @@ class Openldap:
             storage_set_val = int(storage_set_count_str)
         else:
             storage_set_val = 0
-        # Set phase name to upper case required for inheritance
+        """ Set phase name to upper case required for inheritance """
         phase_name = phase_name.upper()
         try:
-            # Extract keys from yardstick file for current phase considering inheritance
-            yardstick_list = self.extract_yardstick_list(phase_name)
+            """ Extract keys from yardstick file for current phase considering inheritance """
+            yardstick_list = self._extract_yardstick_list(phase_name)
 
-            # Extract keys from argument file
+            """ Extract keys from argument file """
             arg_keys_list = Conf.get_keys(self.index)
-            # Since get_all_keys misses out listing entries inside
-            # an array, the below code is required to fetch such
-            # array entries. The result will be stored in a full
-            # list which will be complete and will be used to verify
-            # keys required for each phase.
+            """
+            Since get_all_keys misses out listing entries inside
+            an array, the below code is required to fetch such
+            array entries. The result will be stored in a full
+            list which will be complete and will be used to verify
+            keys required for each phase.
+            """
             full_arg_keys_list = []
             for key in arg_keys_list:
                 if ((key.find('[') != -1) and (key.find(']') != -1)):
@@ -211,28 +222,30 @@ class Openldap:
                 else:
                     full_arg_keys_list.append(key)
 
-            # Below algorithm uses tokenization
-            # of both yardstick and argument key
-            # based on delimiter to generate
-            # smaller key-tokens. Then check if
-            # (A) all the key-tokens are pairs of
-            #     pre-defined token. e.g.,
-            #     if key_yard is machine-id, then
-            #     key_arg must have corresponding
-            #     value of machine_id_val.
-            # OR
-            # (B) both the key-tokens from key_arg
-            #     and key_yard are the same.
+            """
+            Below algorithm uses tokenization
+            of both yardstick and argument key
+            based on delimiter to generate
+            smaller key-tokens. Then check if
+            (A) all the key-tokens are pairs of
+                pre-defined token. e.g.,
+                if key_yard is machine-id, then
+                key_arg must have corresponding
+                value of machine_id_val.
+            OR
+            (B) both the key-tokens from key_arg
+                and key_yard are the same.
+            """
             list_match_found = True
             key_match_found = False
             for key_yard in yardstick_list:
-                key_yard_token_list = re.split('>|\[|\]',key_yard)
+                key_yard_token_list = re.split('>|\[|\]', key_yard)
                 key_match_found = False
                 for key_arg in full_arg_keys_list:
                     if key_match_found is False:
-                        key_arg_token_list = re.split('>|\[|\]',key_arg)
+                        key_arg_token_list = re.split('>|\[|\]', key_arg)
                         if len(key_yard_token_list) == len(key_arg_token_list):
-                            for key_x,key_y in zip(key_yard_token_list, key_arg_token_list):
+                            for key_x, key_y in zip(key_yard_token_list, key_arg_token_list):
                                 key_match_found = False
                                 if key_x == "machine-id":
                                     if key_y != machine_id_val:
@@ -247,7 +260,7 @@ class Openldap:
                                     break
                                 key_match_found = True
                             if key_match_found:
-                                self.key_value_verify(key_arg)
+                                self._key_value_verify(key_arg)
                 if key_match_found is False:
                     list_match_found = False
                     break
@@ -262,7 +275,7 @@ class Openldap:
         """ Performs post install operations. Raises exception on error """
 
         self.validate("post_install")
-        self.keys_validate("post_install")
+        self._keys_validate("post_install")
         # Perform actual operation. Obtain inputs using Conf.get(index, ..)
         return 0
 
