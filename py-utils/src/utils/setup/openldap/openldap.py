@@ -53,11 +53,7 @@ class Openldap:
         Conf.load(self.index, conf_url)
         Conf.load(self.prov, f'yaml://{self._prov_conf_file}')
 
-        if not os.path.isfile('/etc/machine-id'):
-            raise FileNotFoundError('File not found : /etc/machine-id')
-        """ machine_id will be used to read confstore keys """
-        with open('/etc/machine-id') as f:
-            self.machine_id = f.read().strip()
+        self.machine_id = Conf.machine_id
 
         self.cluster_id_key = Conf.get(self.prov, 'CONFIG>CONFSTORE_CLUSTER_ID_KEY').replace("machine-id", self.machine_id)
         self.cluster_id = Conf.get(self.index, self.cluster_id_key)
